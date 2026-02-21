@@ -1,0 +1,115 @@
+﻿import os
+import random
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+
+TOKEN="7872807533:AAH2clakZB2M0VX5ni5VWokiFamh2xgNy5E"
+
+users = {}
+
+words_database = [
+    {"word": "future", "meaning": "آینده"},
+    {"word": "work", "meaning": "کار"},
+    {"word": "learn", "meaning": "یاد گرفتن"},
+    {"word": "happy", "meaning": "خوشحال"},
+    {"word": "strong", "meaning": "قوی"},
+    {"word": "money", "meaning": "پول"},
+    {"word": "success", "meaning": "موفقیت"},
+    {"word": "practice", "meaning": "تمرین"},
+]
+
+def get_level(points):
+    if points < 20:
+        return "Beginner"
+    elif points < 50:
+        return "Elementary"
+    elif points < 100:
+        return "Intermediate"
+    else:
+        return "Advanced"
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
+
+    if user_id not in users:
+        users[user_id] = {
+            "points": 0,
+            "daily_words": []
+        }
+
+    await update.message.reply_text(
+        "👋 Welcome to Professional English Teacher Bot!\n\n"
+        "دستور ها:\n"
+        "/learn → دریافت لغت جدید\n"
+        "/level → دیدن سطح\n"
+        "/points → دیدن امتیاز\n"
+        "با فرستادن جمله انگلیسی تمرین کن ✍️"
+    )
+
+async def learn(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
+
+    if user_id not in users:
+        users[user_id] = {"points": 0, "daily_words": []}
+
+    word = random.choice(words_database)
+    users[user_id]["daily_words"].append(word["word"])
+
+    await update.message.reply_text(
+        f"📚 Word: {word['word']}\nMeaning: {word['meaning']}\n\n"
+        "با این کلمه جمله بساز ✍️"
+    )
+
+async def level(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
+
+    if user_id not in users:
+        users[user_id] = {"points": 0, "daily_words": []}
+
+    points = users[user_id]["points"]
+    lvl = get_level(points)
+
+    await update.message.reply_text(
+        f"🎓 Level: {lvl}\n⭐ Points: {points}"
+    )
+
+async def points(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
+
+    if user_id not in users:
+        users[user_id] = {"points": 0, "daily_words": []}
+
+    await update.message.reply_text(
+        f"⭐ Your Points: {users[user_id]['points']}"
+    )
+
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.effective_user.id)
+
+    if user_id not in users:
+        users[user_id] = {"points": 0, "daily_words": []}
+
+    text = update.message.text.lower()
+
+    if len(text.split()) >= 3:
+        users[user_id]["points"] += 5
+        lvl = get_level(users[user_id]["points"])
+
+        await update.message.reply_text(
+            f"👏 Great sentence!\n+5 Points\n🎓 Your Level: {lvl}"
+        )
+    else:
+        await update.message.reply_text(
+            "❌ جمله کامل نیست. حداقل 3 کلمه بنویس."
+        )
+
+app = ApplicationBuilder().token(TOKEN).build()
+
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("learn", learn))
+app.add_handler(CommandHandler("level", level))
+app.add_handler(CommandHandler("points", points))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+
+print("Bot is running...")
+app.run_polling()
